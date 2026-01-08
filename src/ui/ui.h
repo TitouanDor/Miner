@@ -33,4 +33,9 @@ int draw_menu(APPstate *app);
  */
 void middle_x(WINDOW *win, int y_pos, const char *text);
 
+/**
+ * Cleans up ncurses settings and exits ncurses mode.
+ */
+void cleanup_ncurses();
+
 #endif // UI_H

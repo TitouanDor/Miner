@@ -19,8 +19,9 @@ typedef struct {
     WINDOW *window;               /**< Pointer to the main ncurses window. */
     enum ActualWindow current_window; /**< Current active window/screen. */
     int running;                  /**< Flag indicating if the application is running. */
-    int cursor_x;                /**< X position of the cursor in the game grid. */
-    int cursor_y;                /**< Y position of the cursor in the game grid. */
+    MEVENT mouse_event;         /**< Latest mouse event data. */
+    int cursor_x;                /**< Current x position of the cursor. */
+    int cursor_y;                /**< Current y position of the cursor. */
 } APPstate;
 
 #endif // GAMESTATE_H
