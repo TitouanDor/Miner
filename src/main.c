@@ -1,12 +1,7 @@
 #include <stdio.h>
 #include "log/log.h"
 #include "ui/ui.h"
-
-typedef struct {
-    WINDOW *window;
-    enum ActualWindow current_window;
-    int running;
-} APPstate;
+#include "GameState.h"
 
 int main() {
     if (init_log() != 0) {
@@ -22,20 +17,23 @@ int main() {
     }
     app.current_window = MENU;
     app.running = 1;
+    app.cursor_x = 0;
+    app.cursor_y = 0;
     wtimeout(app.window, 100); // Set input timeout
     write_log(LOG_INFO, "Application started.");
     while (app.running) {
+
         switch (app.current_window) {
             case MENU:
-                // Draw menu and handle input
-                draw_menu(app.window);
+                draw_menu(&app);
                 break;
+
             case GAME:
-                // Game logic would go here
                 break;
-            case OPTIONS:
-                // Options logic would go here
+
+            case END:
                 break;
+
             default:
                 write_log(LOG_WARNING, "Unknown window state.");
                 app.running = 0;

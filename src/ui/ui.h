@@ -2,15 +2,7 @@
 #define UI_H
 
 #include <ncurses.h>
-
-/**
- * Represents the current window/screen displayed by the program.
- */
-enum ActualWindow {
-    MENU,    /**< Main menu screen. */
-    GAME,    /**< Game screen. */
-    OPTIONS  /**< Options/settings screen. */
-};
+#include "./../GameState.h"
 
 /**
  * Initializes the ncurses library and creates the main window.
@@ -30,6 +22,15 @@ WINDOW *initialize_ncurses();
  * \param win Pointer to the ncurses window where the menu will be drawn.
  * \return 0 on success, non-zero on error.
  */
-int draw_menu(WINDOW *win);
+int draw_menu(APPstate *app);
+
+/**
+ * Centers and prints text horizontally in the given window at the specified y position.
+ *
+ * \param win Pointer to the ncurses window.
+ * \param y_pos Y position where the text should be printed.
+ * \param text The text string to be printed.
+ */
+void middle_x(WINDOW *win, int y_pos, const char *text);
 
 #endif // UI_H
