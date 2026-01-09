@@ -13,14 +13,23 @@ int initialize_grid(APPstate *app) {
     int total_cells = app->grid_columns * app->grid_rows;
     app->game_grid.columns = app->grid_columns;
     app->game_grid.rows = app->grid_rows;
+    if (app->mine_pourcentage < 0 || app->mine_pourcentage > 100) {
+        write_log(LOG_ERROR, "Invalid mine percentage: %d", app->mine_pourcentage);
+        return 1;
+    }
     app->game_grid.total_mines = (total_cells * app->mine_pourcentage) / 100;
-    app->game_grid.revealed_cells = 0;
+    if (app->game_grid.total_mines <= 0) {
+        write_log(LOG_ERROR, "Calculated total mines is non-positive: %d",
+                app->game_grid.total_mines);
+        return 1;
+    }
 
     app->game_grid.cells = malloc(app->grid_rows * sizeof(Cell *));
     if (app->game_grid.cells == NULL) {
         write_log(LOG_ERROR, "Failed to allocate memory for grid rows.");
         return 1;
     }
+
 
     for (int r = 0; r < app->grid_rows; r++) {
         app->game_grid.cells[r] = malloc(app->grid_columns * sizeof(Cell));
@@ -48,19 +57,61 @@ int initialize_grid(APPstate *app) {
         }
     }
 
+    // Place mines randomly
+    int placed_mines = 0;
+    while (placed_mines < app->game_grid.total_mines) {
+        int r = rand() % app->grid_rows;
+        int c = rand() % app->grid_columns;
+        if (!app->game_grid.cells[r][c].is_mine) {
+            app->game_grid.cells[r][c].is_mine = TRUE;
+            placed_mines++;
+        }
+    }
+
+    // Set neighbors for each cell
+    for (int r = 0; r < app->grid_rows; r++) {
+        for (int c = 0; c < app->grid_columns; c++) {
+            int idx = 0;
+            for (int dr = -1; dr <= 1; dr++) {
+                for (int dc = -1; dc <= 1; dc++) {
+                    if (dr == 0 && dc == 0) {
+                        continue;
+                    }
+                    int nr = r + dr;
+                    int nc = c + dc;
+                    if (nr >= 0 && nr < app->grid_rows &&
+                        nc >= 0 && nc < app->grid_columns) {
+                        app->game_grid.cells[r][c].neighbors[idx] = &app->game_grid.cells[nr][nc];
+                    } else {
+                        app->game_grid.cells[r][c].neighbors[idx] = NULL;
+                    }
+                    idx++;
+                }
+            }
+        }
+    }
+
+    // Calculate adjacent mines for each cell
+    for (int r = 0; r < app->grid_rows; r++) {
+        for (int c = 0; c < app->grid_columns; c++) {
+            app->game_grid.cells[r][c].adjacent_mines = count_adjacent_mines(app, r, c);
+        }
+    }
+
     return 0;
 }
 
-int count_adjacent_mines(APPstate *app, int row, int col) {
-    int mine_count = 0;
+int count_adjacent_mines(APPstate *app, int r, int c) {
+    int count = 0;
     for (int n = 0; n < 8; n++) {
-        Cell *neighbor = app->game_grid.cells[row][col].neighbors[n];
-        if (neighbor != NULL && neighbor->is_mine) {
-            mine_count++;
+        Cell *nb = app->game_grid.cells[r][c].neighbors[n];
+        if (nb && nb->is_mine) {
+            count++;
         }
     }
-    return mine_count;
+    return count;
 }
+
 
 int reveal_cell(APPstate *app, int row, int col) {
     if (row < 0 || row >= app->game_grid.rows || col < 0 || col >= app->game_grid.columns) {
@@ -74,11 +125,45 @@ int reveal_cell(APPstate *app, int row, int col) {
         return 0; // Cell already revealed
     }
 
+    if (cell->is_mine) {
+        write_log(LOG_INFO, "Revealed a mine at (%d, %d). Game over.", row, col);
+        return -1; // Indicate that a mine was revealed
+    }
+
     cell->is_revealed = TRUE;
-    write_log(LOG_INFO, "Revealed cell (%d, %d).", row, col);
+    write_log(LOG_INFO, "Revealed cell (%d, %d) and has %d adjacent mines.", row, col, count_adjacent_mines(app, row, col));
     app->game_grid.revealed_cells++;
 
-    // Additional logic for revealing adjacent cells if no adjacent mines would go here
+    if (cell->adjacent_mines == 0) {
+        // Reveal adjacent cells recursively
+        for (int n = 0; n < 8; n++) {
+            Cell *nb = cell->neighbors[n];
+            if (nb != NULL && !nb->is_revealed && !nb->is_mine) {
+                revel_chaine(nb, app);
+            }
+        }
+    }
+
+    return 0;
+}
+
+int revel_chaine(Cell *cell, APPstate *app) {
+    if (cell->is_revealed || cell->is_mine) {
+        return 0;
+    }
+
+    cell->is_revealed = TRUE;
+    app->game_grid.revealed_cells++;
+    write_log(LOG_INFO, "Revealed cell in chain with %d adjacent mines.", cell->adjacent_mines);
+
+    if (cell->adjacent_mines == 0) {
+        for (int n = 0; n < 8; n++) {
+            Cell *nb = cell->neighbors[n];
+            if (nb != NULL && !nb->is_revealed && !nb->is_mine) {
+                revel_chaine(nb, app);
+            }
+        }
+    }
 
     return 0;
 }
@@ -99,6 +184,18 @@ int flagged_cell(APPstate *app, int row, int col) {
     write_log(LOG_INFO, "%s cell (%d, %d).", cell->is_flagged ? "Flagged" : "Unflagged", row, col);
 
     return 0;
+}
+
+int count_flagged_cells(APPstate *app) {
+    int flagged_count = 0;
+    for (int r = 0; r < app->game_grid.rows; r++) {
+        for (int c = 0; c < app->game_grid.columns; c++) {
+            if (app->game_grid.cells[r][c].is_flagged) {
+                flagged_count++;
+            }
+        }
+    }
+    return flagged_count;
 }
 
 void cleanup_grid(APPstate *app){

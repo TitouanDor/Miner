@@ -55,6 +55,10 @@ int draw_menu(APPstate *app) {
         write_log(LOG_ERROR, "Window is NULL in draw_menu.");
         return 1;
     }
+
+    if (app->game_grid.cells != NULL) {
+        cleanup_grid(app);
+    }
     
     werase(win);
     while (menu[n]) n++;
@@ -197,11 +201,16 @@ int draw_game(APPstate *app) {
     }
 
     if (app->game_grid.cells == NULL) {
-        write_log(LOG_ERROR, "Failed to initialize game grid.");
+        write_log(LOG_ERROR, "Game grid cells are NULL.");
     }
 
-    
-    
+    int flagged_cells = count_flagged_cells(app);
+
+    if (app->game_grid.revealed_cells + flagged_cells == app->grid_rows * app->grid_columns && flagged_cells == app->game_grid.total_mines) {
+        write_log(LOG_INFO, "All cells revealed or flagged. Player wins!");
+        app->current_window = END;
+        return 0;
+    }
     werase(win);
     time_t now = time(NULL);
     int elapsed = (int)difftime(now, app->start_time);
@@ -243,7 +252,9 @@ int draw_game(APPstate *app) {
                 snprintf(adj, sizeof(adj), "%d", app->game_grid.cells[r][c].adjacent_mines);
                 mvwprintw(win, y_start + r, x_start + c, "%s", adj);
             } else if (app->game_grid.cells[r][c].is_flagged == TRUE) {
+                wattron(win, A_REVERSE | A_BOLD);
                 mvwprintw(win, y_start + r, x_start + c, "F");
+                wattroff(win, A_REVERSE | A_BOLD);
             } else {
                 mvwprintw(win, y_start + r, x_start + c, "#");
             }
@@ -266,6 +277,11 @@ int draw_game(APPstate *app) {
 
 
     if (mouse_clicked == LEFT_BUTTON) {
+        write_log(LOG_INFO, "Revealed cells: %d, Flagged cells: %d, Total cells: %d",
+            app->game_grid.revealed_cells,
+            count_flagged_cells(app),
+            app->grid_rows * app->grid_columns);
+
         if (clicked_y == max_y-2){
             app->current_window = MENU;
             write_log(LOG_INFO, "Returning to menu from game screen.");
@@ -273,7 +289,10 @@ int draw_game(APPstate *app) {
             write_log(LOG_INFO, "Quit selected from game screen.");
             app->running = 0;
         } else {
-            reveal_cell(app, clicked_y - y_start, clicked_x - x_start);
+            if (reveal_cell(app, clicked_y - y_start, clicked_x - x_start) == -1) {
+                app->current_window = END;
+                write_log(LOG_INFO, "Player hit a mine at (%d, %d). Game over.", clicked_y - y_start, clicked_x - x_start);
+            }
         }
     } else if (mouse_clicked == RIGHT_BUTTON) {
         flagged_cell(app, clicked_y - y_start, clicked_x - x_start);

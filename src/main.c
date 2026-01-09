@@ -31,9 +31,9 @@ APPstate *init_APPstate() {
     app->running = 1;
     app->cursor_x = 0;
     app->cursor_y = 0;
-    app->grid_columns = 5;
-    app->grid_rows = 5;
-    app->mine_pourcentage = 12;
+    app->grid_columns = 10;
+    app->grid_rows = 10;
+    app->mine_pourcentage = 15;
     app->mouse_event = (MEVENT){0};
     app->game_grid.cells = NULL;
     wtimeout(app->window, 100); // Set input timeout
@@ -51,6 +51,7 @@ int main() {
         write_log(LOG_ERROR, "Application state initialization failed.");
         return 1;
     }
+    srand(time(NULL));
 
     write_log(LOG_INFO, "Application started.");
     while (app->running && !sigint_triggered) {

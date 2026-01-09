@@ -48,9 +48,18 @@ int initialize_grid(APPstate *app);
  * \param app Pointer to the current application state.
  * \param row Row index of the cell to reveal.
  * \param col Column index of the cell to reveal.
- * \return 0 on success, non-zero on error.
+ * \return 0 on success, 1 on error and -1 if the cell is a mine.
  */
 int reveal_cell(APPstate *app, int row, int col);
+
+/**
+ * Recursively reveals adjacent cells when a cell with zero adjacent mines is revealed.
+ *
+ * \param cell Pointer to the cell to reveal.
+ * \param app Pointer to the current application state.
+ * \return 0 on success, non-zero on error.
+ */
+int revel_chaine(Cell *cell, APPstate *app);
 
 /**
  * Counts the number of adjacent mines for a given cell.
@@ -73,6 +82,14 @@ int count_adjacent_mines(APPstate *app, int row, int col);
  * \return 0 on success, non-zero on error.
  */
 int flagged_cell(APPstate *app, int row, int col);
+
+/**
+ * Counts the number of flagged cells in the grid.
+ *
+ * \param app Pointer to the current application state.
+ * \return Number of flagged cells.
+ */
+int count_flagged_cells(APPstate *app);
 
 /**
  * Cleans up the game grid resources.
