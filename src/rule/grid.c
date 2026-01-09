@@ -70,13 +70,33 @@ int reveal_cell(APPstate *app, int row, int col) {
 
     Cell *cell = &app->game_grid.cells[row][col];
     if (cell->is_revealed) {
+        write_log(LOG_INFO, "Cell (%d, %d) already revealed.", row, col);
         return 0; // Cell already revealed
     }
 
     cell->is_revealed = TRUE;
+    write_log(LOG_INFO, "Revealed cell (%d, %d).", row, col);
     app->game_grid.revealed_cells++;
 
     // Additional logic for revealing adjacent cells if no adjacent mines would go here
+
+    return 0;
+}
+
+int flagged_cell(APPstate *app, int row, int col) {
+    if (row < 0 || row >= app->game_grid.rows || col < 0 || col >= app->game_grid.columns) {
+        write_log(LOG_WARNING, "Attempted to flag cell out of bounds (%d, %d).", row, col);
+        return 1;
+    }
+
+    if (app->game_grid.cells[row][col].is_revealed) {
+        write_log(LOG_INFO, "Cannot flag revealed cell (%d, %d).", row, col);
+        return 1; // Cannot flag a revealed cell
+    }
+
+    Cell *cell = &app->game_grid.cells[row][col];
+    cell->is_flagged = !cell->is_flagged;
+    write_log(LOG_INFO, "%s cell (%d, %d).", cell->is_flagged ? "Flagged" : "Unflagged", row, col);
 
     return 0;
 }

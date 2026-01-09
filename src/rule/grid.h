@@ -63,6 +63,18 @@ int reveal_cell(APPstate *app, int row, int col);
 int count_adjacent_mines(APPstate *app, int row, int col);
 
 /**
+ * Flags or unflags a cell at the specified row and column.
+ *
+ * Toggles the flagged state of the cell, preventing it from being revealed.
+ *
+ * \param app Pointer to the current application state.
+ * \param row Row index of the cell to flag/unflag.
+ * \param col Column index of the cell to flag/unflag.
+ * \return 0 on success, non-zero on error.
+ */
+int flagged_cell(APPstate *app, int row, int col);
+
+/**
  * Cleans up the game grid resources.
  *
  * Frees any allocated memory and resets grid-related data in the APPstate.

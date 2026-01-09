@@ -180,6 +180,7 @@ int draw_options(APPstate *app) {
 int draw_game(APPstate *app) {
     int clicked_y = -1;
     int clicked_x = -1;
+    int mouse_clicked = 0;
     WINDOW *win = app->window;
     if (win == NULL) {
         write_log(LOG_ERROR, "Window is NULL in draw_game.");
@@ -237,36 +238,47 @@ int draw_game(APPstate *app) {
 
     for (int r = 0; r < app->grid_rows; r++) {
         for (int c = 0; c < app->grid_columns; c++) {
-
-            if (app->game_grid.cells[r][c].is_revealed == FALSE){
-                mvwprintw(win, y_start + r, x_start + c, "#");
-            } else if (app->game_grid.cells[r][c].is_flagged == TRUE){
-                mvwprintw(win, y_start + r, x_start + c, "F");
-            } else {
-                char *adj;
+            if (app->game_grid.cells[r][c].is_revealed == TRUE) {
+                char adj[4];
                 snprintf(adj, sizeof(adj), "%d", app->game_grid.cells[r][c].adjacent_mines);
                 mvwprintw(win, y_start + r, x_start + c, "%s", adj);
+            } else if (app->game_grid.cells[r][c].is_flagged == TRUE) {
+                mvwprintw(win, y_start + r, x_start + c, "F");
+            } else {
+                mvwprintw(win, y_start + r, x_start + c, "#");
             }
         }
     }
 
+    mouse_clicked = NONE;
+
     if (app->mouse_event.bstate & BUTTON1_PRESSED) {
-        app->mouse_event.bstate = 0;
-        clicked_y = app->mouse_event.y;
-        clicked_x = app->mouse_event.x;
+        mouse_clicked = LEFT_BUTTON;
+    } else if (app->mouse_event.bstate & BUTTON3_PRESSED) {
+        mouse_clicked = RIGHT_BUTTON;
     } else {
         return 0;
     }
 
-    if (clicked_y == max_y-2){
-        app->current_window = MENU;
-        write_log(LOG_INFO, "Returning to menu from game screen.");
-    } else if (clicked_y == max_y-1) {
-        write_log(LOG_INFO, "Quit selected from game screen.");
-        app->running = 0;
-    } else {
-        reveal_cell(app, clicked_y - y_start, clicked_x - x_start);
+    clicked_y = app->mouse_event.y;
+    clicked_x = app->mouse_event.x;
+    app->mouse_event.bstate = 0;
+
+
+    if (mouse_clicked == LEFT_BUTTON) {
+        if (clicked_y == max_y-2){
+            app->current_window = MENU;
+            write_log(LOG_INFO, "Returning to menu from game screen.");
+        } else if (clicked_y == max_y-1) {
+            write_log(LOG_INFO, "Quit selected from game screen.");
+            app->running = 0;
+        } else {
+            reveal_cell(app, clicked_y - y_start, clicked_x - x_start);
+        }
+    } else if (mouse_clicked == RIGHT_BUTTON) {
+        flagged_cell(app, clicked_y - y_start, clicked_x - x_start);
     }
+    
     return 0;
 }
 

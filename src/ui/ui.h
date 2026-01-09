@@ -4,6 +4,13 @@
 #include <ncurses.h>
 #include "./../GameState.h"
 
+enum MouseButtons {
+    NONE,
+    LEFT_BUTTON,
+    MIDDLE_BUTTON,
+    RIGHT_BUTTON
+};
+
 /**
  * Initializes the ncurses library and creates the main window.
  *
