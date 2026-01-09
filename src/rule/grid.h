@@ -10,6 +10,8 @@ typedef struct APPstate APPstate; // Forward declaration
  * Represents a single cell in the game grid.
  */
 typedef struct cell {
+    int x;              /**< X coordinate of the cell in the grid. */
+    int y;              /**< Y coordinate of the cell in the grid. */
     int is_mine;        /**< Flag indicating if the cell contains a mine. */
     int is_revealed;    /**< Flag indicating if the cell has been revealed. */
     int is_flagged;     /**< Flag indicating if the cell is flagged by the player. */
@@ -57,30 +59,36 @@ int place_mines(APPstate *app, int first_row, int first_col);
  * game logic (e.g., revealing adjacent cells if there are no adjacent mines).
  *
  * \param app Pointer to the current application state.
- * \param row Row index of the cell to reveal.
- * \param col Column index of the cell to reveal.
+ * \param cell Pointer to the cell to reveal.
  * \return 0 on success, 1 on error and -1 if the cell is a mine.
  */
-int reveal_cell(APPstate *app, int row, int col);
+int reveal_cell(APPstate *app, Cell *cell);
 
 /**
  * Recursively reveals adjacent cells when a cell with zero adjacent mines is revealed.
  *
- * \param cell Pointer to the cell to reveal.
  * \param app Pointer to the current application state.
+ * \param cell Pointer to the cell to reveal.
  * \return 0 on success, non-zero on error.
  */
-int revel_chaine(Cell *cell, APPstate *app);
+int reveal_chaine(APPstate *app, Cell *cell);
+
+/**
+ * Reveals all adjacent cells if the number of flagged neighbors matches the cell's adjacent mines.
+ *
+ * \param app Pointer to the current application state.
+ * \param cell Pointer to the cell.
+ * \return 0 on success, -1 if a mine was revealed.
+ */
+int reveal_all_flagged(APPstate *app, Cell *cell);
 
 /**
  * Counts the number of adjacent mines for a given cell.
  *
- * \param app Pointer to the current application state.
- * \param row Row index of the cell.
- * \param col Column index of the cell.
+ * \param cell Pointer to the cell.
  * \return Number of adjacent mines.
  */
-int count_adjacent_mines(APPstate *app, int row, int col);
+int count_adjacent_mines(Cell *cell);
 
 /**
  * Flags or unflags a cell at the specified row and column.
@@ -88,11 +96,10 @@ int count_adjacent_mines(APPstate *app, int row, int col);
  * Toggles the flagged state of the cell, preventing it from being revealed.
  *
  * \param app Pointer to the current application state.
- * \param row Row index of the cell to flag/unflag.
- * \param col Column index of the cell to flag/unflag.
+ * \param cell Pointer to the cell to flag/unflag.
  * \return 0 on success, non-zero on error.
  */
-int flagged_cell(APPstate *app, int row, int col);
+int flagged_cell(APPstate *app, Cell *cell);
 
 /**
  * Counts the number of flagged cells in the grid.

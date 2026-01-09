@@ -52,6 +52,8 @@ int initialize_grid(APPstate *app) {
             app->game_grid.cells[r][c].is_revealed = FALSE;
             app->game_grid.cells[r][c].is_flagged = FALSE;
             app->game_grid.cells[r][c].adjacent_mines = 0;
+            app->game_grid.cells[r][c].x = r;
+            app->game_grid.cells[r][c].y = c;
             for (int n = 0; n < 8; n++) {
                 app->game_grid.cells[r][c].neighbors[n] = NULL;
             }
@@ -97,18 +99,22 @@ int place_mines(APPstate *app, int first_row, int first_col) {
     // Calculate adjacent mines for each cell
     for (int r = 0; r < app->grid_rows; r++) {
         for (int c = 0; c < app->grid_columns; c++) {
-            app->game_grid.cells[r][c].adjacent_mines = count_adjacent_mines(app, r, c);
+            Cell *cell = &app->game_grid.cells[r][c];
+            cell->adjacent_mines = count_adjacent_mines(cell);
         }
     }
 
-    reveal_cell(app, first_row, first_col);
+    app->game_grid.mine_placed = TRUE;
+    // Reveal the first clicked cell
+    Cell *first_cell = &app->game_grid.cells[first_row][first_col];
+    reveal_cell(app, first_cell);
     return TRUE;
 }
 
-int count_adjacent_mines(APPstate *app, int r, int c) {
+int count_adjacent_mines(Cell *cell) {
     int count = 0;
     for (int n = 0; n < 8; n++) {
-        Cell *nb = app->game_grid.cells[r][c].neighbors[n];
+        Cell *nb = cell->neighbors[n];
         if (nb && nb->is_mine) {
             count++;
         }
@@ -116,33 +122,32 @@ int count_adjacent_mines(APPstate *app, int r, int c) {
     return count;
 }
 
-int reveal_cell(APPstate *app, int row, int col) {
-    if (row < 0 || row >= app->game_grid.rows || col < 0 || col >= app->game_grid.columns) {
-        write_log(LOG_WARNING, "Attempted to reveal cell out of bounds (%d, %d).", row, col);
+int reveal_cell(APPstate *app, Cell *cell) {
+    if (cell->x < 0 || cell->x >= app->game_grid.rows || cell->y < 0 || cell->y >= app->game_grid.columns) {
+        write_log(LOG_WARNING, "Attempted to reveal cell out of bounds (%d, %d).", cell->x, cell->y);
         return 1;
     }
 
-    Cell *cell = &app->game_grid.cells[row][col];
     if (cell->is_revealed) {
-        write_log(LOG_INFO, "Cell (%d, %d) already revealed.", row, col);
+        reveal_all_flagged(app, cell);
         return 0; // Cell already revealed
     }
 
     if (cell->is_mine) {
-        write_log(LOG_INFO, "Revealed a mine at (%d, %d). Game over.", row, col);
+        write_log(LOG_INFO, "Revealed a mine at (%d, %d). Game over.", cell->x, cell->y);
         return -1; // Indicate that a mine was revealed
     }
 
     cell->is_revealed = TRUE;
     app->game_grid.revealed_cells++;
-    write_log(LOG_INFO, "Revealed cell (%d, %d) and has %d adjacent mines.", row, col, count_adjacent_mines(app, row, col));
+    write_log(LOG_INFO, "Revealed cell (%d, %d) and has %d adjacent mines.", cell->x, cell->y, count_adjacent_mines(cell));
 
     if (cell->adjacent_mines == 0) {
         // Reveal adjacent cells recursively
         for (int n = 0; n < 8; n++) {
             Cell *nb = cell->neighbors[n];
             if (nb != NULL && !nb->is_revealed && !nb->is_mine) {
-                revel_chaine(nb, app);
+                reveal_chaine(app, nb);
             }
         }
     }
@@ -150,9 +155,11 @@ int reveal_cell(APPstate *app, int row, int col) {
     return 0;
 }
 
-int revel_chaine(Cell *cell, APPstate *app) {
-    if (cell->is_revealed || cell->is_mine) {
+int reveal_chaine(APPstate *app, Cell *cell) {
+    if (cell->is_revealed || cell->is_flagged) {
         return 0;
+    } else if (cell->is_mine){
+        return -1;
     }
 
     cell->is_revealed = TRUE;
@@ -163,7 +170,11 @@ int revel_chaine(Cell *cell, APPstate *app) {
         for (int n = 0; n < 8; n++) {
             Cell *nb = cell->neighbors[n];
             if (nb != NULL && !nb->is_revealed && !nb->is_mine) {
-                revel_chaine(nb, app);
+                reveal_chaine(app, nb);
+            }
+
+            if (nb != NULL && nb->is_mine) {
+                return -1; // A mine was revealed in the chain
             }
         }
     }
@@ -171,20 +182,49 @@ int revel_chaine(Cell *cell, APPstate *app) {
     return 0;
 }
 
-int flagged_cell(APPstate *app, int row, int col) {
-    if (row < 0 || row >= app->game_grid.rows || col < 0 || col >= app->game_grid.columns) {
-        write_log(LOG_WARNING, "Attempted to flag cell out of bounds (%d, %d).", row, col);
+int reveal_all_flagged(APPstate *app, Cell *cell) {
+    if (cell->is_revealed) {
+        int flagged_neighbors = 0;
+        for (int n = 0; n < 8; n++) {
+            Cell *nb = cell->neighbors[n];
+            if (nb != NULL && nb->is_flagged) {
+                flagged_neighbors++;
+            }
+        }
+
+        if (flagged_neighbors == cell->adjacent_mines) {
+            write_log(LOG_INFO, "Revealing adjacent cells for (%d, %d) as flagged neighbors match adjacent mines.", cell->x, cell->y);
+            for (int n = 0; n < 8; n++) {
+                Cell *nb = cell->neighbors[n];
+                if (nb != NULL && !nb->is_flagged && !nb->is_revealed) {
+                    int result = reveal_chaine(app, nb);
+                    if (result == -1) {
+                        return -1; // A mine was revealed
+                    }
+                }
+            }
+        } else {
+            write_log(LOG_INFO, "Not enough flagged neighbors to reveal adjacent cells for (%d, %d).", cell->x, cell->y);
+        }
+
+    }
+    
+    return 0;
+}
+
+int flagged_cell(APPstate *app, Cell *cell) {
+    if (cell->x < 0 || cell->x >= app->game_grid.rows || cell->y < 0 || cell->y >= app->game_grid.columns) {
+        write_log(LOG_WARNING, "Attempted to flag cell out of bounds (%d, %d).", cell->x, cell->y);
         return 1;
     }
 
-    if (app->game_grid.cells[row][col].is_revealed) {
-        write_log(LOG_INFO, "Cannot flag revealed cell (%d, %d).", row, col);
+    if (cell->is_revealed) {
+        write_log(LOG_INFO, "Cannot flag revealed cell (%d, %d).", cell->x, cell->y);
         return 1; // Cannot flag a revealed cell
     }
 
-    Cell *cell = &app->game_grid.cells[row][col];
     cell->is_flagged = !cell->is_flagged;
-    write_log(LOG_INFO, "%s cell (%d, %d).", cell->is_flagged ? "Flagged" : "Unflagged", row, col);
+    write_log(LOG_INFO, "%s cell (%d, %d).", cell->is_flagged ? "Flagged" : "Unflagged", cell->x, cell->y);
 
     return 0;
 }

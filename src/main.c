@@ -119,7 +119,6 @@ int main() {
                 app->running = 0;
                 break;
         }
-        mvwprintw(app->window, 0, 0, "Cursor: (%d, %d)   ", app->cursor_x, app->cursor_y);
         wrefresh(app->window);
     }
     

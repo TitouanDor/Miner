@@ -259,6 +259,16 @@ int draw_game(APPstate *app) {
         }
     }
 
+    Cell *cell = NULL;
+
+    if (mouse.y - y_start < 0 || mouse.y - y_start >= app->grid_rows ||
+        mouse.x - x_start < 0 || mouse.x - x_start >= app->grid_columns) {
+        app->mouse.click = NONE;
+    } else {
+        cell = &app->game_grid.cells[mouse.y - y_start][mouse.x - x_start];
+    }
+
+
     if (mouse.click == LEFT_BUTTON) {
         write_log(LOG_INFO, "Revealed cells: %d, Flagged cells: %d, Total cells: %d",
             app->game_grid.revealed_cells,
@@ -276,15 +286,15 @@ int draw_game(APPstate *app) {
                 break;
 
             default:
-                if (reveal_cell(app, mouse.y - y_start, mouse.x - x_start) == -1) {
+                if (cell && reveal_cell(app, cell) == -1) {
                     app->current_window = END;
                     app->end_time = time(NULL);
                     write_log(LOG_INFO, "Player hit a mine at (%d, %d). Game over.", mouse.y - y_start, mouse.x - x_start);
                 }
                 break;
         }
-    } else if (mouse.click == RIGHT_BUTTON) {
-        flagged_cell(app, mouse.y - y_start, mouse.x - x_start);
+    } else if (mouse.click == RIGHT_BUTTON && cell) {
+        flagged_cell(app, cell);
     }
     app->mouse.click = NONE;
     return 0;
