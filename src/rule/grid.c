@@ -116,7 +116,6 @@ int count_adjacent_mines(APPstate *app, int r, int c) {
     return count;
 }
 
-
 int reveal_cell(APPstate *app, int row, int col) {
     if (row < 0 || row >= app->game_grid.rows || col < 0 || col >= app->game_grid.columns) {
         write_log(LOG_WARNING, "Attempted to reveal cell out of bounds (%d, %d).", row, col);

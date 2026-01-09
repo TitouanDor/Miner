@@ -15,6 +15,26 @@ enum ActualWindow {
     END      /**< End screen. */
 };
 
+
+/**
+ * Represents mouse button states.
+ */
+enum MouseButtons {
+    NONE, /**< No button pressed. */
+    LEFT_BUTTON, /**< Left mouse button pressed. */
+    MIDDLE_BUTTON, /**< Middle mouse button pressed. */
+    RIGHT_BUTTON /**< Right mouse button pressed. */
+};
+
+/**
+ *  Represents a mouse event.
+ */
+typedef struct mouse {
+    int x;  /**< X coordinate of the mouse event. */
+    int y;  /**< Y coordinate of the mouse event. */
+    int click; /**< Button state of the mouse event. */
+} MouseEvent;
+
 /**
  * Represents the current state of the game.
  */
@@ -22,7 +42,7 @@ struct APPstate{
     WINDOW *window;               /**< Pointer to the main ncurses window. */
     enum ActualWindow current_window; /**< Current active window/screen. */
     int running;                  /**< Flag indicating if the application is running. */
-    MEVENT mouse_event;         /**< Latest mouse event data. */
+    MouseEvent mouse;          /**< Mouse event structure. */
     int cursor_x;                /**< Current x position of the cursor. */
     int cursor_y;                /**< Current y position of the cursor. */
     int grid_columns;            /**< Number of columns in the game grid. */

@@ -43,7 +43,8 @@ WINDOW *initialize_ncurses() {
     mouseinterval(0);
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
     /* Some terminals (e.g. xterm) require enabling "Any event" reporting */
-    printf("\033[?1003h"); fflush(stdout);
+    printf("\033[?1003h"); 
+    fflush(stdout);
     write_log(LOG_INFO, "Has %d Mouse Capabilities", has_mouse());
     return win;
 }
@@ -75,28 +76,36 @@ int draw_menu(APPstate *app) {
         }
     }
 
-    if (app->cursor_y == 2 && (app->mouse_event.bstate & BUTTON1_PRESSED)) {
-        app->mouse_event.bstate = 0;
-        app->start_time = time(NULL);
-        app->current_window = GAME;
-        write_log(LOG_INFO, "New game started from menu.");
+     MouseEvent mouse = app->mouse;
 
-    } else if (app->cursor_y == 3 && (app->mouse_event.bstate & BUTTON1_PRESSED)) {
-        app->mouse_event.bstate = 0;
-        app->current_window = OPTIONS;
-        write_log(LOG_INFO, "Options selected from menu.");
+    if (mouse.click == LEFT_BUTTON) {
+        switch (mouse.y) {
+            case 2:
+                app->start_time = time(NULL);
+                app->current_window = GAME;
+                write_log(LOG_INFO, "New game started from menu.");
+                break;
 
-    } else if (app->cursor_y == 4 && (app->mouse_event.bstate & BUTTON1_PRESSED)) {
-        app->mouse_event.bstate = 0;
-        write_log(LOG_INFO, "Quit selected from menu.");
-        app->running = 0;
+            case 3:
+                app->current_window = OPTIONS;
+                write_log(LOG_INFO, "Options selected from menu.");
+                break;
+
+            case 4:
+                write_log(LOG_INFO, "Quit selected from menu.");
+                app->running = 0;
+                break;
+
+            default:
+                break;
+
+        }
+        app->mouse.click = NONE;
     }
     return 0;
 }
 
 int draw_options(APPstate *app) {
-    int clicked_y = -1;
-    int clicked_x = -1;
     int plus_x = -1;
     int minus_x = -1;
     WINDOW *win = app->window;
@@ -127,56 +136,64 @@ int draw_options(APPstate *app) {
     middle_x(win, 5, row);
     middle_x(win, 7, mine);
 
-    if (app->mouse_event.bstate & BUTTON1_PRESSED) {
-        app->mouse_event.bstate = 0;
-        clicked_y = app->mouse_event.y;
-        clicked_x = app->mouse_event.x;
+    MouseEvent mouse = app->mouse;
+
+    if (mouse.click == LEFT_BUTTON) {
+        switch (mouse.y) {
+            case 3:
+                write_log(LOG_INFO, "Increasing columns from %d to %d", app->grid_columns, app->grid_columns + 1);
+                plus_x = (max_x - strlen(col)) / 2 + strlen(col) - 1;
+                minus_x = (max_x - strlen(col)) / 2;
+                if (mouse.x == plus_x && app->grid_columns < 30) {
+                    app->grid_columns += 1;
+                } else if (mouse.x == minus_x && app->grid_columns > 5) {
+                    app->grid_columns -= 1;
+                }
+                break;
+
+            case 5:
+                write_log(LOG_INFO, "Increasing rows from %d to %d", app->grid_rows, app->grid_rows + 1);
+                plus_x = (max_x - strlen(row)) / 2 + strlen(row) - 1;
+                minus_x = (max_x - strlen(row)) / 2;
+                if (mouse.x == plus_x && app->grid_rows < 30) {
+                    app->grid_rows += 1;
+                } else if (mouse.x == minus_x && app->grid_rows > 5) {
+                    app->grid_rows -= 1;
+                }
+                break;
+
+            case 7:
+                write_log(LOG_INFO, "Increasing mines from %d to %d", app->mine_pourcentage, app->mine_pourcentage + 1);
+                plus_x = (max_x - strlen(mine)) / 2 + strlen(mine) - 1;
+                minus_x = (max_x - strlen(mine)) / 2;
+                if (mouse.x == plus_x && app->mine_pourcentage < 23) {
+                    app->mine_pourcentage += 1;
+                } else if (mouse.x == minus_x && app->mine_pourcentage > 12) {
+                    app->mine_pourcentage -= 1;
+                }
+                break;
+
+            case 8:
+                app->current_window = GAME;
+                app->start_time = time(NULL);
+                write_log(LOG_INFO, "Starting game from options.");
+                break;
+
+            case 9:
+                app->current_window = MENU;
+                write_log(LOG_INFO, "Returning to menu from options.");
+                break;
+
+            case 10:
+                write_log(LOG_INFO, "Quit selected from options.");
+                app->running = 0;
+                break;
+
+            default:
+                break;
+        }
+        app->mouse.click = NONE;
     }
-
-    if (clicked_y == 8){
-        app->current_window = GAME;
-        app->start_time = time(NULL);
-        write_log(LOG_INFO, "Starting game from options.");
-
-    } else if (clicked_y == 9){
-        app->current_window = MENU;
-        write_log(LOG_INFO, "Returning to menu from options.");
-
-    } else if (clicked_y == 10) {
-        write_log(LOG_INFO, "Quit selected from options.");
-        app->running = 0;
-
-    } else if (clicked_y == 3) {
-        write_log(LOG_INFO, "Increasing columns from %d to %d", app->grid_columns, app->grid_columns + 1);
-        plus_x = (max_x - strlen(col)) / 2 + strlen(col) - 1;
-        minus_x = (max_x - strlen(col)) / 2;
-        if (clicked_x == plus_x && app->grid_columns < 30) {
-            app->grid_columns += 1;
-        } else if (clicked_x == minus_x && app->grid_columns > 5) {
-            app->grid_columns -= 1;
-        }
-
-    } else if (clicked_y == 5) {
-        write_log(LOG_INFO, "Increasing rows from %d to %d", app->grid_rows, app->grid_rows + 1);
-        plus_x = (max_x - strlen(row)) / 2 + strlen(row) - 1;
-        minus_x = (max_x - strlen(row)) / 2;
-        if (clicked_x == plus_x && app->grid_rows < 30) {
-            app->grid_rows += 1;
-        } else if (clicked_x == minus_x && app->grid_rows > 5) {
-            app->grid_rows -= 1;
-        }
-
-    } else if (clicked_y == 7) {
-        write_log(LOG_INFO, "Increasing mines from %d to %d", app->mine_pourcentage, app->mine_pourcentage + 1);
-        plus_x = (max_x - strlen(mine)) / 2 + strlen(mine) - 1;
-        minus_x = (max_x - strlen(mine)) / 2;
-        if (clicked_x == plus_x && app->mine_pourcentage < 23) {
-            app->mine_pourcentage += 1;
-        } else if (clicked_x == minus_x && app->mine_pourcentage > 12) {
-            app->mine_pourcentage -= 1;
-        }
-    }
-    
     free(col);
     free(row);
     free(mine);
@@ -184,9 +201,6 @@ int draw_options(APPstate *app) {
 }
 
 int draw_game(APPstate *app) {
-    int clicked_y = -1;
-    int clicked_x = -1;
-    int mouse_clicked = 0;
     WINDOW *win = app->window;
     if (win == NULL) {
         write_log(LOG_ERROR, "Window is NULL in draw_game.");
@@ -198,8 +212,8 @@ int draw_game(APPstate *app) {
 
     if (app->game_grid.revealed_cells + flagged_cells == app->grid_rows * app->grid_columns && flagged_cells == app->game_grid.total_mines) {
         write_log(LOG_INFO, "All cells revealed or flagged. Player wins!");
-        app->end_time = time(NULL);
         app->current_window = END;
+        app->end_time = time(NULL);
         return 0;
     }
     werase(win);
@@ -232,50 +246,47 @@ int draw_game(APPstate *app) {
     int x_start = (max_x - app->grid_columns) / 2;
     int y_start = (max_y - app->grid_rows) / 2;
 
-    mouse_clicked = NONE;
+    MouseEvent mouse = app->mouse;
 
-    if (app->mouse_event.bstate & BUTTON1_PRESSED) {
-        mouse_clicked = LEFT_BUTTON;
-    } else if (app->mouse_event.bstate & BUTTON3_PRESSED) {
-        mouse_clicked = RIGHT_BUTTON;
-    } else {
-        return 0;
+    if (app->game_grid.mine_placed == FALSE && mouse.click == LEFT_BUTTON) {
+        if (mouse.y - y_start >= 0 && mouse.y - y_start < app->grid_rows && mouse.x - x_start >= 0 && mouse.x - x_start < app->grid_columns) {
+            write_log(LOG_INFO, "Placing mines, first click at (%d, %d).", mouse.y - y_start, mouse.x - x_start);
+            place_mines(app, mouse.y - y_start, mouse.x - x_start);
+            app->game_grid.mine_placed = TRUE;
+            return 0;
+        } else {
+            write_log(LOG_WARNING, "First click out of bounds for mine placement at (%d, %d).", mouse.y - y_start, mouse.x - x_start);
+        }
     }
 
-    clicked_y = app->mouse_event.y;
-    clicked_x = app->mouse_event.x;
-    app->mouse_event.bstate = 0;
-
-    if (app->game_grid.mine_placed == FALSE){
-        place_mines(app, clicked_y - y_start, clicked_x - x_start);
-        app->game_grid.mine_placed = TRUE;
-        write_log(LOG_INFO, "Mines placed on the grid, first click at (%d, %d).", clicked_y - y_start, clicked_x - x_start);
-        return 0;
-    }
-
-
-    if (mouse_clicked == LEFT_BUTTON) {
+    if (mouse.click == LEFT_BUTTON) {
         write_log(LOG_INFO, "Revealed cells: %d, Flagged cells: %d, Total cells: %d",
             app->game_grid.revealed_cells,
             count_flagged_cells(app),
             app->grid_rows * app->grid_columns);
+        switch (max_y-mouse.y) {
+            case 2:
+                app->current_window = MENU;
+                write_log(LOG_INFO, "Returning to menu from game screen.");
+                break;
 
-        if (clicked_y == max_y-2){
-            app->current_window = MENU;
-            write_log(LOG_INFO, "Returning to menu from game screen.");
-        } else if (clicked_y == max_y-1) {
-            write_log(LOG_INFO, "Quit selected from game screen.");
-            app->running = 0;
-        } else {
-            if (reveal_cell(app, clicked_y - y_start, clicked_x - x_start) == -1) {
-                app->current_window = END;
-                write_log(LOG_INFO, "Player hit a mine at (%d, %d). Game over.", clicked_y - y_start, clicked_x - x_start);
-            }
+            case 1:
+                write_log(LOG_INFO, "Quit selected from game screen.");
+                app->running = 0;
+                break;
+
+            default:
+                if (reveal_cell(app, mouse.y - y_start, mouse.x - x_start) == -1) {
+                    app->current_window = END;
+                    app->end_time = time(NULL);
+                    write_log(LOG_INFO, "Player hit a mine at (%d, %d). Game over.", mouse.y - y_start, mouse.x - x_start);
+                }
+                break;
         }
-    } else if (mouse_clicked == RIGHT_BUTTON) {
-        flagged_cell(app, clicked_y - y_start, clicked_x - x_start);
+    } else if (mouse.click == RIGHT_BUTTON) {
+        flagged_cell(app, mouse.y - y_start, mouse.x - x_start);
     }
-    
+    app->mouse.click = NONE;
     return 0;
 }
 
@@ -333,9 +344,7 @@ int draw_end(APPstate *app) {
         write_log(LOG_ERROR, "Window is NULL in draw_end.");
         return 1;
     }
-    int clicked_y = -1;
-    int clicked_x = -1;
-    int mouse_clicked = 0;
+
     getmaxyx(win, max_y, max_x);
 
     werase(win);
@@ -346,7 +355,6 @@ int draw_end(APPstate *app) {
         middle_x(win, 1, "=== Congratulations! You win! ===");
     }
 
-    time_t now = time(NULL);
     int elapsed = (int)difftime(app->end_time, app->start_time);
     char time_str[30];
     snprintf(time_str, sizeof(time_str), "Total Time: %02d:%02d", elapsed / 60, elapsed % 60);
@@ -370,36 +378,29 @@ int draw_end(APPstate *app) {
         wattroff(win, A_REVERSE);
     }
 
-    mouse_clicked = NONE;
-
-    if (app->mouse_event.bstate & BUTTON1_PRESSED) {
-        mouse_clicked = LEFT_BUTTON;
-    } else if (app->mouse_event.bstate & BUTTON3_PRESSED) {
-        mouse_clicked = RIGHT_BUTTON;
-    } else {
-        return 0;
-    }
-
-    clicked_y = app->mouse_event.y;
-    clicked_x = app->mouse_event.x;
-    app->mouse_event.bstate = 0;
-
-    if (mouse_clicked == LEFT_BUTTON) {
-        if (clicked_y == max_y-2){
+    MouseEvent mouse = app->mouse;
+    switch (max_y-mouse.y) {
+        case 2:
             app->current_window = MENU;
             write_log(LOG_INFO, "Returning to menu from end screen.");
-        } else if (clicked_y == max_y-1) {
+            break;
+        case 1:
             write_log(LOG_INFO, "Quit selected from end screen.");
             app->running = 0;
-        }
+            break;
+        
+        default:
+            break;
     }
+    
+    mouse.click = NONE;
 
     return 0;
 }
 
 void middle_x(WINDOW *win, int y_pos, const char *text) {
-    int x, y;
-    getmaxyx(win, y, x);
+    int x;
+    x = getmaxx(win);
     mvwprintw(win, y_pos, (x - strlen(text)) / 2, "%s", text);
 }
 

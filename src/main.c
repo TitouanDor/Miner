@@ -34,7 +34,7 @@ APPstate *init_APPstate() {
     app->grid_columns = 10;
     app->grid_rows = 10;
     app->mine_pourcentage = 15;
-    app->mouse_event = (MEVENT){0};
+    app->mouse = (MouseEvent){0};
     app->game_grid.cells = NULL;
     wtimeout(app->window, 100); // Set input timeout
     return app;
@@ -62,14 +62,25 @@ int main() {
         if (ch == KEY_MOUSE) {
             MEVENT event;
             if (getmouse(&event) == OK) {
-                app->mouse_event = event;
-
                 if (event.bstate & REPORT_MOUSE_POSITION) {
                     app->cursor_x = event.x;
                     app->cursor_y = event.y;
+                } else if (event.bstate & BUTTON1_PRESSED) {
+                    app->mouse.x = event.x;
+                    app->mouse.y = event.y;
+                    app->mouse.click = LEFT_BUTTON;
+                    write_log(LOG_INFO, "Mouse event at (%d, %d) with button state %lu", event.x, event.y, event.bstate);
+                } else if (event.bstate & BUTTON3_PRESSED) {
+                    app->mouse.x = event.x;
+                    app->mouse.y = event.y;
+                    app->mouse.click = RIGHT_BUTTON;
+                    write_log(LOG_INFO, "Mouse event at (%d, %d) with button state %lu", event.x, event.y, event.bstate);
                 }
+
+                
             }
         } else {
+            app->mouse.click = NONE;
             // Handle other key inputs if necessary
         }
 
@@ -108,6 +119,7 @@ int main() {
                 app->running = 0;
                 break;
         }
+        mvwprintw(app->window, 0, 0, "Cursor: (%d, %d)   ", app->cursor_x, app->cursor_y);
         wrefresh(app->window);
     }
     
